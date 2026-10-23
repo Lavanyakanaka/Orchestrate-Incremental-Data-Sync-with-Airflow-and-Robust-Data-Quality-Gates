@@ -15,13 +15,13 @@ CREATE TABLE IF NOT EXISTS public.products (
 
 -- 2. Staging Tables: Transient staging layer for incoming batch delta
 CREATE TABLE IF NOT EXISTS staging.transactions (
-    transaction_id VARCHAR(50) PRIMARY KEY,
-    customer_id VARCHAR(50) NOT NULL,
-    product_id VARCHAR(50) NOT NULL,
-    amount NUMERIC(10, 2) NOT NULL,
-    transaction_date DATE NOT NULL,
-    status VARCHAR(20) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+    transaction_id VARCHAR(50),
+    customer_id VARCHAR(50),
+    product_id VARCHAR(50),
+    amount NUMERIC(10, 2),
+    transaction_date DATE,
+    status VARCHAR(20),
+    updated_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Holding tables populated by data quality validation step

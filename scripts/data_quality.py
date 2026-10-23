@@ -305,12 +305,14 @@ def fetch_staging_records(conn: PgConnection) -> pd.DataFrame:
     """
     Fetch all records currently residing in staging.transactions.
     """
-    query = """
-        SELECT transaction_id, customer_id, product_id, amount, transaction_date, status, updated_at
-        FROM staging.transactions;
-    """
-    df = pd.read_sql_query(query, conn)
-    return df
+    cols = ["transaction_id", "customer_id", "product_id", "amount", "transaction_date", "status", "updated_at"]
+    query = f"SELECT {', '.join(cols)} FROM staging.transactions;"
+    with conn.cursor() as cur:
+        cur.execute(query)
+        rows = cur.fetchall()
+        if not rows:
+            return pd.DataFrame(columns=cols)
+        return pd.DataFrame(rows, columns=cols)
 
 
 def fetch_dimension_products(conn: PgConnection) -> Set[str]:

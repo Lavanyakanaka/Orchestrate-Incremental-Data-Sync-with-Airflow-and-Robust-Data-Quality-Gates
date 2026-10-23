@@ -176,6 +176,18 @@ def load_staging_table(df: pd.DataFrame, conn: Optional[PgConnection] = None) ->
 
     try:
         with conn.cursor() as cur:
+            # Relax staging constraints to allow full data quality quarantine evaluation
+            try:
+                cur.execute("ALTER TABLE staging.transactions DROP CONSTRAINT IF EXISTS transactions_pkey;")
+                cur.execute("ALTER TABLE staging.transactions ALTER COLUMN customer_id DROP NOT NULL;")
+                cur.execute("ALTER TABLE staging.transactions ALTER COLUMN product_id DROP NOT NULL;")
+                cur.execute("ALTER TABLE staging.transactions ALTER COLUMN amount DROP NOT NULL;")
+                cur.execute("ALTER TABLE staging.transactions ALTER COLUMN transaction_date DROP NOT NULL;")
+                cur.execute("ALTER TABLE staging.transactions ALTER COLUMN status DROP NOT NULL;")
+                cur.execute("ALTER TABLE staging.transactions ALTER COLUMN updated_at DROP NOT NULL;")
+            except Exception as e:
+                logger.debug("Could not alter staging constraints (continuing): %s", e)
+
             # 1. Truncate staging table for idempotency
             logger.info("Truncating staging.transactions table for idempotent load...")
             cur.execute("TRUNCATE TABLE staging.transactions;")
@@ -199,7 +211,6 @@ def load_staging_table(df: pd.DataFrame, conn: Optional[PgConnection] = None) ->
                 cust_id = str(row["customer_id"]).strip() if pd.notna(row["customer_id"]) else None
                 prod_id = str(row["product_id"]).strip() if pd.notna(row["product_id"]) else None
                 
-                # Coerce amount if possible
                 try:
                     amount = float(row["amount"]) if pd.notna(row["amount"]) else None
                 except (ValueError, TypeError):
@@ -208,7 +219,6 @@ def load_staging_table(df: pd.DataFrame, conn: Optional[PgConnection] = None) ->
                 tx_date = str(row["transaction_date"]).strip() if pd.notna(row["transaction_date"]) else None
                 status = str(row["status"]).strip() if pd.notna(row["status"]) else None
                 
-                # Parse timestamp
                 try:
                     updated_at = pd.to_datetime(row["updated_at"]).isoformat() if pd.notna(row["updated_at"]) else None
                 except Exception:
@@ -216,20 +226,10 @@ def load_staging_table(df: pd.DataFrame, conn: Optional[PgConnection] = None) ->
 
                 records.append((tx_id, cust_id, prod_id, amount, tx_date, status, updated_at))
 
-            # Filter out records where primary key is None for staging table if DB enforces NOT NULL PK
-            # If transaction_id is None, assign a synthetic placeholder or keep track
-            db_safe_records = []
-            for r in records:
-                if r[0] is None:
-                    # Generate temporary staging key to prevent PK violation in staging
-                    db_safe_records.append((f"INVALID-PK-TEMP-{len(db_safe_records)}", *r[1:]))
-                else:
-                    db_safe_records.append(r)
-
-            execute_values(cur, insert_query, db_safe_records)
+            execute_values(cur, insert_query, records)
             conn.commit()
-            logger.info("Successfully loaded %d records into staging.transactions.", len(db_safe_records))
-            return len(db_safe_records)
+            logger.info("Successfully loaded %d records into staging.transactions.", len(records))
+            return len(records)
 
     except Exception as e:
         conn.rollback()
