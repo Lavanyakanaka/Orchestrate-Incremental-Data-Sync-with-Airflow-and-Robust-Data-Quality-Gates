@@ -1,0 +1,52 @@
+# Data Quality Gates Configuration
+# Defines rules executed against staging.transactions before promoting records to public.fact_transactions
+
+rules:
+  schema_validation:
+    enabled: true
+    description: "Verify required columns exist and adhere to expected data types"
+    expected_columns:
+      transaction_id: "string"
+      customer_id: "string"
+      product_id: "string"
+      amount: "float"
+      transaction_date: "date"
+      status: "string"
+      updated_at: "datetime"
+    allowed_statuses:
+      - "completed"
+      - "pending"
+      - "cancelled"
+      - "refunded"
+      - "failed"
+
+  uniqueness_check:
+    enabled: true
+    description: "Ensure transaction_id is strictly unique within the staging batch"
+    columns:
+      - "transaction_id"
+
+  completeness_check:
+    enabled: true
+    description: "Verify critical columns do not contain NULL or empty values"
+    not_null_columns:
+      - "transaction_id"
+      - "customer_id"
+      - "product_id"
+      - "amount"
+      - "transaction_date"
+
+  validity_check:
+    enabled: true
+    description: "Ensure transaction amount is strictly positive and valid"
+    rules:
+      - column: "amount"
+        min_value: 0.01
+        condition: "greater_than_zero"
+
+  referential_integrity_check:
+    enabled: true
+    description: "Ensure product_id exists in the public.products dimension catalog"
+    foreign_key_column: "product_id"
+    reference_table: "public.products"
+    reference_column: "product_id"

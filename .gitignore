@@ -1,0 +1,52 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Unit test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Airflow runtime and logs
+logs/
+airflow.cfg
+airflow.db
+webserver_config.py
+
+# Sensitive environment configuration
+.env
+
+# Raw generated test data (preserve folder structure via .gitkeep)
+data/raw/*.csv
+
+# Operating System files
+.DS_Store
+Thumbs.db
